@@ -1,0 +1,21 @@
+name: Sync Jira Labels to GitHub
+
+on:
+  repository_dispatch:
+    types: [jira-label-update]
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Labels
+        id: extract
+        run: echo "LABELS=$(jq -r '.issue.fields.labels | join(",")' $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+
+      - name: Update GitHub PR Labels
+        run: |
+          curl -X POST "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.client_payload.pr_number }}/labels" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
+          -d "{\"labels\": [\"${{ env.LABELS }}\"]}"
